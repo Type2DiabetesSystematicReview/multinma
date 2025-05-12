@@ -346,10 +346,10 @@ nma <- function(network,
 
     # Set the network treatments vector
     network$treatments <- if (.is_default(network$treatments)) {
-        .default(factor(levels(network$classes), levels = levels(network$classes)))
-      } else {
-        factor(levels(network$classes), levels = levels(network$classes))
-      }
+      .default(factor(levels(network$classes), levels = levels(network$classes)))
+    } else {
+      factor(levels(network$classes), levels = levels(network$classes))
+    }
 
     # Set network classes vector
     network$classes <- network$treatments
@@ -425,7 +425,7 @@ nma <- function(network,
           warn(glue::glue(
             "Ignoring node-split comparisons without both both direct and independent indirect evidence: ",
             glue::glue_collapse(ns_invalid$comparison, sep = ", ", width = 100), "."
-            ))
+          ))
 
           nodesplit <- ns_valid
         } else {
@@ -561,9 +561,9 @@ nma <- function(network,
 
   # When are priors on auxiliary parameters required?
   has_aux <- (likelihood == "normal" && has_ipd(network)) ||
-              likelihood %in% c("ordered", "weibull", "gompertz",
-                                "weibull-aft", "lognormal", "loglogistic",
-                                "gamma", "gengamma", "mspline", "pexp")
+    likelihood %in% c("ordered", "weibull", "gompertz",
+                      "weibull-aft", "lognormal", "loglogistic",
+                      "gamma", "gengamma", "mspline", "pexp")
 
   # Are study intercepts present? Not if only contrast data
   has_intercepts <- has_agd_arm(network) || has_ipd(network) || has_agd_regression(network)
@@ -640,7 +640,7 @@ nma <- function(network,
   if (is.null(adapt_delta)) {
     adapt_delta <- switch(trt_effects, fixed = 0.8, random = 0.95)
   } else if (!rlang::is_scalar_double(adapt_delta) ||
-      adapt_delta <= 0 || adapt_delta >= 1) abort("`adapt_delta` should be a  numeric value in (0, 1).")
+             adapt_delta <= 0 || adapt_delta >= 1) abort("`adapt_delta` should be a  numeric value in (0, 1).")
 
   # Check aux_by / aux_regression combination
   aux_by <- rlang::enquo(aux_by)
@@ -1160,18 +1160,18 @@ nma <- function(network,
       i_knots <- knots[-c(1, nrow(knots)), ]
       basis <- purrr::imap(b_knots,
                            ~withCallingHandlers(splines2::mSpline(.x[1],
-                                                       knots = i_knots[[.y]],
-                                                       Boundary.knots = .x,
-                                                       degree = mspline_degree,
-                                                       intercept = TRUE),
-                                     error = function(e) abort(glue::glue("Could not create spline basis for study {glue::double_quote(.y)}."),
-                                                               parent = e),
-                                     warning = function(w) {
-                                       warn(glue::glue("Warning while creating spline basis for study {glue::double_quote(.y)}."), parent = w)
-                                       rlang::cnd_muffle(w)
-                                     }
-                                    )
+                                                                  knots = i_knots[[.y]],
+                                                                  Boundary.knots = .x,
+                                                                  degree = mspline_degree,
+                                                                  intercept = TRUE),
+                                                error = function(e) abort(glue::glue("Could not create spline basis for study {glue::double_quote(.y)}."),
+                                                                          parent = e),
+                                                warning = function(w) {
+                                                  warn(glue::glue("Warning while creating spline basis for study {glue::double_quote(.y)}."), parent = w)
+                                                  rlang::cnd_muffle(w)
+                                                }
                            )
+      )
 
     }
 
@@ -1218,24 +1218,24 @@ nma <- function(network,
     aux_group <- aux_id
   }
 
-if (class_effects == "exchangeable") {
-  # Create class design vector for class means
-  class_mean_design <- which_CE(network$classes, class_sd)
+  if (class_effects == "exchangeable") {
+    # Create class design vector for class means
+    class_mean_design <- which_CE(network$classes, class_sd)
 
-  # Create class design vector for class SDs
-  if (is.list(class_sd)) {
-    class_sd_design <- which_CE(forcats::fct_collapse(network$classes, !!!class_sd), class_sd)
-  } else if (class_sd == "common") {
-    class_sd_design <- list(
-      # Change non-zero class IDs to 1
-      id = pmin(class_mean_design$id, 1),
-      # Set common class label
-      label = "All Classes"
-    )
-  } else if (class_sd == "independent") {
-    class_sd_design <- class_mean_design
+    # Create class design vector for class SDs
+    if (is.list(class_sd)) {
+      class_sd_design <- which_CE(forcats::fct_collapse(network$classes, !!!class_sd), class_sd)
+    } else if (class_sd == "common") {
+      class_sd_design <- list(
+        # Change non-zero class IDs to 1
+        id = pmin(class_mean_design$id, 1),
+        # Set common class label
+        label = "All Classes"
+      )
+    } else if (class_sd == "independent") {
+      class_sd_design <- class_mean_design
+    }
   }
-}
   # Fit using nma.fit
   stanfit <- nma.fit(ipd_x = X_ipd, ipd_y = y_ipd,
     agd_arm_x = X_agd_arm, agd_arm_y = y_agd_arm,
@@ -1273,6 +1273,36 @@ if (class_effects == "exchangeable") {
     int_thin = int_thin,
     int_check = int_check,
     basis = basis)
+
+  # if no iterations return the stan arguments (data etc) instead of the
+  # fitted object
+  if (is.list(stanfit) && !inherits(stanfit, "stanfit")) {
+    # got only stanargs back—build full output but swap in stanargs
+    out <- list(
+      network     = network,
+      stanargs   = stanfit$stanargs,
+      stanfit     = NULL,
+      trt_effects = trt_effects,
+      consistency = consistency,
+      regression  = regression,
+      aux_regression = aux_regression,
+      class_interactions = if (!is.null(regression) && !is.null(network$classes)) class_interactions else NULL,
+      xbar        = xbar,
+      likelihood  = likelihood,
+      link        = link,
+      aux_by      = if (has_aux_by) colnames(get_aux_by_data(aux_dat, by = aux_by)) else NULL,
+                priors = list(prior_intercept = if (has_intercepts) prior_intercept else NULL,
+        prior_trt       = prior_trt,
+        prior_class_mean= if (class_effects=="exchangeable") prior_class_mean else NULL,
+        prior_class_sd  = if (class_effects=="exchangeable") prior_class_sd else NULL,
+        prior_het       = if (trt_effects=="random") prior_het else NULL,
+        prior_het_type  = if (trt_effects=="random") prior_het_type else NULL,
+        prior_reg       = if (!is.null(regression)&&!is_only_offset(regression)) prior_reg else NULL,
+        prior_aux       = if (has_aux) prior_aux else NULL,
+                              prior_aux_reg = if (has_aux_regression) prior_aux_reg else NULL))
+    class(out) <- if (inherits(network,"mlnmr_data")) c("stan_mlnmr","stan_nma") else "stan_nma"
+    return(out)
+  }
 
   # Make readable parameter names for generated quantities
   fnames_oi <- stanfit@sim$fnames_oi
@@ -1415,7 +1445,7 @@ if (class_effects == "exchangeable") {
     # Label class_sd parameters
     fnames_oi[grepl("^class_sd\\[[0-9]+\\]$", fnames_oi)] <- paste0("class_sd[", class_sd_design$label, "]")
     network$class_sd <- class_sd_design$label
-}
+  }
   stanfit@sim$fnames_oi <- fnames_oi
 
   # Create stan_nma object
@@ -1614,12 +1644,12 @@ nma.fit <- function(ipd_x = NULL, ipd_y = NULL,
   # Check class effect arguments
   class_effects <- rlang::arg_match(class_effects)
   if (length(class_effects) > 1) abort("`class_effects` must be a single string.")
-if (class_effects == "exchangeable") {
-  if (is.null(which_CE) || !rlang::is_integerish(which_CE) || any(which_CE < 0))
-    abort("`which_CE` must be an integer design vector for class effects.")
-  if (is.null(which_CE_sd) || !rlang::is_integerish(which_CE_sd) || any(which_CE_sd < 0))
-    abort("`which_CE_sd` must be an integer design vector for class effect SDs.")
-}
+  if (class_effects == "exchangeable") {
+    if (is.null(which_CE) || !rlang::is_integerish(which_CE) || any(which_CE < 0))
+      abort("`which_CE` must be an integer design vector for class effects.")
+    if (is.null(which_CE_sd) || !rlang::is_integerish(which_CE_sd) || any(which_CE_sd < 0))
+      abort("`which_CE_sd` must be an integer design vector for class effect SDs.")
+  }
 
   likelihood <- check_likelihood(likelihood)
   link <- check_link(link, likelihood)
@@ -1641,13 +1671,13 @@ if (class_effects == "exchangeable") {
     if (!is.null(X_aux)) check_prior(prior_aux_reg)
   }
   if (class_effects == "exchangeable"){
-  check_prior(prior_class_mean)
-  check_prior(prior_class_sd)
-} else {
-  # Dummy class effects priors for non-CE models, not used but requested by Stan data
-  prior_class_mean <- normal(0, 1)
-  prior_class_sd <- half_normal(1)
-}
+    check_prior(prior_class_mean)
+    check_prior(prior_class_sd)
+  } else {
+    # Dummy class effects priors for non-CE models, not used but requested by Stan data
+    prior_class_mean <- normal(0, 1)
+    prior_class_sd <- half_normal(1)
+  }
   prior_het_type <- rlang::arg_match(prior_het_type)
 
   # Dummy RE prior for FE model, not used but requested by Stan data
@@ -1899,31 +1929,31 @@ if (class_effects == "exchangeable") {
     which_CE = if (class_effects == "exchangeable") which_CE else numeric(0),
     which_CE_sd = if (class_effects == "exchangeable") which_CE_sd else numeric(0),
     class_effects = ifelse(class_effects == "exchangeable", 1, 0)
-    )
+  )
 
   # Add priors
   standat <- purrr::list_modify(standat,
-    !!! prior_standat(prior_intercept, "prior_intercept",
-                      valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
-    !!! prior_standat(prior_trt, "prior_trt",
-                      valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
-    !!! prior_standat(prior_reg, "prior_reg",
-                      valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
-    !!! prior_standat(prior_het, "prior_het",
-                      valid = c("Normal", "half-Normal", "log-Normal",
-                                "Cauchy",  "half-Cauchy",
-                                "Student t", "half-Student t", "log-Student t",
-                                "Exponential", "flat (implicit)")),
-    !!! prior_standat(prior_class_mean, "prior_class_mean",
-                      valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
-    !!! prior_standat(prior_class_sd, "prior_class_sd",
-                      valid = c("Normal", "half-Normal", "log-Normal",
-                                "Cauchy",  "half-Cauchy",
-                                "Student t", "half-Student t", "log-Student t",
-                                "Exponential", "flat (implicit)")),
-    prior_het_type = switch(prior_het_type,
-                            sd = 1, var = 2, prec = 3)
-    )
+                                !!! prior_standat(prior_intercept, "prior_intercept",
+                                                  valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
+                                !!! prior_standat(prior_trt, "prior_trt",
+                                                  valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
+                                !!! prior_standat(prior_reg, "prior_reg",
+                                                  valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
+                                !!! prior_standat(prior_het, "prior_het",
+                                                  valid = c("Normal", "half-Normal", "log-Normal",
+                                                            "Cauchy",  "half-Cauchy",
+                                                            "Student t", "half-Student t", "log-Student t",
+                                                            "Exponential", "flat (implicit)")),
+                                !!! prior_standat(prior_class_mean, "prior_class_mean",
+                                                  valid = c("Normal", "Cauchy", "Student t", "flat (implicit)")),
+                                !!! prior_standat(prior_class_sd, "prior_class_sd",
+                                                  valid = c("Normal", "half-Normal", "log-Normal",
+                                                            "Cauchy",  "half-Cauchy",
+                                                            "Student t", "half-Student t", "log-Student t",
+                                                            "Exponential", "flat (implicit)")),
+                                prior_het_type = switch(prior_het_type,
+                                                        sd = 1, var = 2, prec = 3)
+  )
 
   # Standard pars to monitor
   pars <- c("mu", "beta", "d",
@@ -1974,20 +2004,20 @@ if (class_effects == "exchangeable") {
     if (!has_ipd) prior_aux <- half_normal(1)
 
     standat <- purrr::list_modify(standat,
-      # Add outcomes
-      ipd_y = if (has_ipd) ipd_y$.y else numeric(),
-      agd_arm_y = if (has_agd_arm) agd_arm_y$.y else numeric(),
-      agd_arm_se = if (has_agd_arm) agd_arm_y$.se else numeric(),
+                                  # Add outcomes
+                                  ipd_y = if (has_ipd) ipd_y$.y else numeric(),
+                                  agd_arm_y = if (has_agd_arm) agd_arm_y$.y else numeric(),
+                                  agd_arm_se = if (has_agd_arm) agd_arm_y$.se else numeric(),
 
-      # Add prior for auxiliary parameter - individual-level variance
-      !!! prior_standat(prior_aux, "prior_aux",
-                        valid = c("Normal", "half-Normal", "log-Normal",
-                                  "Cauchy",  "half-Cauchy",
-                                  "Student t", "half-Student t", "log-Student t",
-                                  "Exponential", "flat (implicit)")),
+                                  # Add prior for auxiliary parameter - individual-level variance
+                                  !!! prior_standat(prior_aux, "prior_aux",
+                                                    valid = c("Normal", "half-Normal", "log-Normal",
+                                                              "Cauchy",  "half-Cauchy",
+                                                              "Student t", "half-Student t", "log-Student t",
+                                                              "Exponential", "flat (implicit)")),
 
-      # Specify link
-      link = switch(link, identity = 1, log = 2)
+                                  # Specify link
+                                  link = switch(link, identity = 1, log = 2)
     )
 
     stanargs <- purrr::list_modify(stanargs,
@@ -1995,17 +2025,17 @@ if (class_effects == "exchangeable") {
                                    data = standat,
                                    pars = c(pars, "sigma"))
 
-  # -- Bernoulli/binomial likelihood (one parameter)
+    # -- Bernoulli/binomial likelihood (one parameter)
   } else if (likelihood %in% c("bernoulli", "binomial")) {
 
     standat <- purrr::list_modify(standat,
-      # Add outcomes
-      ipd_r = if (has_ipd) ipd_y$.r else integer(),
-      agd_arm_r = if (has_agd_arm) agd_arm_y$.r else integer(),
-      agd_arm_n = if (has_agd_arm) agd_arm_y$.n else integer(),
+                                  # Add outcomes
+                                  ipd_r = if (has_ipd) ipd_y$.r else integer(),
+                                  agd_arm_r = if (has_agd_arm) agd_arm_y$.r else integer(),
+                                  agd_arm_n = if (has_agd_arm) agd_arm_y$.n else integer(),
 
-      # Specify link
-      link = switch(link, logit = 1, probit = 2, cloglog = 3)
+                                  # Specify link
+                                  link = switch(link, logit = 1, probit = 2, cloglog = 3)
     )
 
     stanargs <- purrr::list_modify(stanargs,
@@ -2013,17 +2043,17 @@ if (class_effects == "exchangeable") {
                                    data = standat,
                                    pars = pars)
 
-  # -- Bernoulli/binomial likelihood (two parameter)
+    # -- Bernoulli/binomial likelihood (two parameter)
   } else if (likelihood %in% c("bernoulli2", "binomial2")) {
 
     standat <- purrr::list_modify(standat,
-      # Add outcomes
-      ipd_r = if (has_ipd) ipd_y$.r else integer(),
-      agd_arm_r = if (has_agd_arm) agd_arm_y$.r else integer(),
-      agd_arm_n = if (has_agd_arm) agd_arm_y$.n else integer(),
+                                  # Add outcomes
+                                  ipd_r = if (has_ipd) ipd_y$.r else integer(),
+                                  agd_arm_r = if (has_agd_arm) agd_arm_y$.r else integer(),
+                                  agd_arm_n = if (has_agd_arm) agd_arm_y$.n else integer(),
 
-      # Specify link
-      link = switch(link, logit = 1, probit = 2, cloglog = 3)
+                                  # Specify link
+                                  link = switch(link, logit = 1, probit = 2, cloglog = 3)
     )
 
     stanargs <- purrr::list_modify(stanargs,
@@ -2031,18 +2061,18 @@ if (class_effects == "exchangeable") {
                                    data = standat,
                                    pars = if (n_int > 1 && int_thin > 0) c(pars, "theta2_bar_cum") else pars)
 
-  # -- Poisson likelihood
+    # -- Poisson likelihood
   } else if (likelihood == "poisson") {
 
     standat <- purrr::list_modify(standat,
-      # Add outcomes
-      ipd_r = if (has_ipd) ipd_y$.r else integer(),
-      ipd_E = if (has_ipd) ipd_y$.E else numeric(),
-      agd_arm_r = if (has_agd_arm) agd_arm_y$.r else integer(),
-      agd_arm_E = if (has_agd_arm) agd_arm_y$.E else numeric(),
+                                  # Add outcomes
+                                  ipd_r = if (has_ipd) ipd_y$.r else integer(),
+                                  ipd_E = if (has_ipd) ipd_y$.E else numeric(),
+                                  agd_arm_r = if (has_agd_arm) agd_arm_y$.r else integer(),
+                                  agd_arm_E = if (has_agd_arm) agd_arm_y$.E else numeric(),
 
-      # Specify link
-      link = switch(link, log = 1)
+                                  # Specify link
+                                  link = switch(link, log = 1)
     )
 
     stanargs <- purrr::list_modify(stanargs,
@@ -2050,7 +2080,7 @@ if (class_effects == "exchangeable") {
                                    data = standat,
                                    pars = pars)
 
-  # -- Ordered multinomial likelihood
+    # -- Ordered multinomial likelihood
   } else if (likelihood == "ordered") {
 
     if (has_ipd) {
@@ -2072,10 +2102,10 @@ if (class_effects == "exchangeable") {
       if (!has_ipd) ncat <- ncol(agd_arm_y$.r)
       # Determine which categories are present
       agd_arm_cat <- t(apply(agd_arm_y$.r, 1,
-                         function(x) {
-                           cs <- which(!is.na(x))
-                           c(cs, rep(0, ncat - length(cs)))
-                         }))
+                             function(x) {
+                               cs <- which(!is.na(x))
+                               c(cs, rep(0, ncat - length(cs)))
+                             }))
       agd_arm_ncat <- rowSums(agd_arm_cat > 0)
       # Replace missing category counts with 0 (these will drop out of the likelihood)
       agd_arm_r <- agd_arm_y$.r
@@ -2088,27 +2118,27 @@ if (class_effects == "exchangeable") {
     }
 
     standat <- purrr::list_modify(standat,
-      # Add outcomes
-      ncat = ncat,
+                                  # Add outcomes
+                                  ncat = ncat,
 
-      ipd_r = if (has_ipd) ipd_r_int else integer(),
-      ipd_cat = if (has_ipd) ipd_cat else matrix(0, 0, ncat),
-      ipd_ncat = if (has_ipd) ipd_ncat else integer(),
+                                  ipd_r = if (has_ipd) ipd_r_int else integer(),
+                                  ipd_cat = if (has_ipd) ipd_cat else matrix(0, 0, ncat),
+                                  ipd_ncat = if (has_ipd) ipd_ncat else integer(),
 
-      agd_arm_r = if (has_agd_arm) agd_arm_r else matrix(0, 0, ncat),
-      agd_arm_n = if (has_agd_arm) agd_arm_n else integer(),
-      agd_arm_cat = if (has_agd_arm) agd_arm_cat else matrix(0, 0, ncat),
-      agd_arm_ncat = if (has_agd_arm) agd_arm_ncat else integer(),
+                                  agd_arm_r = if (has_agd_arm) agd_arm_r else matrix(0, 0, ncat),
+                                  agd_arm_n = if (has_agd_arm) agd_arm_n else integer(),
+                                  agd_arm_cat = if (has_agd_arm) agd_arm_cat else matrix(0, 0, ncat),
+                                  agd_arm_ncat = if (has_agd_arm) agd_arm_ncat else integer(),
 
-      # Add prior for auxiliary parameters - latent cutoffs
-      !!! prior_standat(prior_aux, "prior_aux",
-                        valid = c("Normal", "half-Normal", "log-Normal",
-                                  "Cauchy",  "half-Cauchy",
-                                  "Student t", "half-Student t", "log-Student t",
-                                  "Exponential", "flat (implicit)")),
+                                  # Add prior for auxiliary parameters - latent cutoffs
+                                  !!! prior_standat(prior_aux, "prior_aux",
+                                                    valid = c("Normal", "half-Normal", "log-Normal",
+                                                              "Cauchy",  "half-Cauchy",
+                                                              "Student t", "half-Student t", "log-Student t",
+                                                              "Exponential", "flat (implicit)")),
 
-      # Specify link
-      link = switch(link, logit = 1, probit = 2, cloglog = 3)
+                                  # Specify link
+                                  link = switch(link, logit = 1, probit = 2, cloglog = 3)
     )
 
     stanargs <- purrr::list_modify(stanargs,
@@ -2116,7 +2146,7 @@ if (class_effects == "exchangeable") {
                                    data = standat,
                                    pars = c(pars, "cc"))
 
-  # -- Parametric survival likelihoods
+    # -- Parametric survival likelihoods
   } else if (likelihood %in% setdiff(valid_lhood$survival, c("mspline", "pexp"))) {
 
     # Pull out Surv data
@@ -2201,31 +2231,31 @@ if (class_effects == "exchangeable") {
     # Add in priors for auxiliary parameters
     if (likelihood != "gengamma") {
       standat <- purrr::list_modify(standat,
-                                     # Specify prior on shape parameters
-                                     !!! prior_standat(prior_aux, "prior_aux",
-                                                       valid = c("Normal", "half-Normal", "log-Normal",
-                                                                 "Cauchy",  "half-Cauchy",
-                                                                 "Student t", "half-Student t", "log-Student t",
-                                                                 "Exponential", "flat (implicit)")),
+                                    # Specify prior on shape parameters
+                                    !!! prior_standat(prior_aux, "prior_aux",
+                                                      valid = c("Normal", "half-Normal", "log-Normal",
+                                                                "Cauchy",  "half-Cauchy",
+                                                                "Student t", "half-Student t", "log-Student t",
+                                                                "Exponential", "flat (implicit)")),
 
                                     # Dummy prior details for aux2
                                     !!! prior_standat(prior_aux2, "prior_aux2",
                                                       valid = "flat (implicit)"))
     } else {
       standat <- purrr::list_modify(standat,
-                                     # Specify prior on sigma parameters
-                                     !!! prior_standat(prior_aux$sigma, "prior_aux",
-                                                       valid = c("Normal", "half-Normal", "log-Normal",
-                                                                 "Cauchy",  "half-Cauchy",
-                                                                 "Student t", "half-Student t", "log-Student t",
-                                                                 "Exponential", "flat (implicit)")),
+                                    # Specify prior on sigma parameters
+                                    !!! prior_standat(prior_aux$sigma, "prior_aux",
+                                                      valid = c("Normal", "half-Normal", "log-Normal",
+                                                                "Cauchy",  "half-Cauchy",
+                                                                "Student t", "half-Student t", "log-Student t",
+                                                                "Exponential", "flat (implicit)")),
 
-                                     # Specify prior on k parameters
-                                     !!! prior_standat(prior_aux$k, "prior_aux2",
-                                                       valid = c("Normal", "half-Normal", "log-Normal",
-                                                                 "Cauchy",  "half-Cauchy",
-                                                                 "Student t", "half-Student t", "log-Student t",
-                                                                 "Exponential", "flat (implicit)")))
+                                    # Specify prior on k parameters
+                                    !!! prior_standat(prior_aux$k, "prior_aux2",
+                                                      valid = c("Normal", "half-Normal", "log-Normal",
+                                                                "Cauchy",  "half-Cauchy",
+                                                                "Student t", "half-Student t", "log-Student t",
+                                                                "Exponential", "flat (implicit)")))
     }
 
 
@@ -2236,13 +2266,13 @@ if (class_effects == "exchangeable") {
                                    # Monitor auxiliary parameters
                                    pars =
                                      if (likelihood %in% c("exponential", "exponential-aft")) pars
-                                     else if (likelihood == "lognormal") c(pars, "sdlog", "beta_aux", "d_aux")
-                                     else if (likelihood == "gengamma") c(pars, "sigma", "k", "beta_aux", "d_aux")
-                                     else c(pars, "shape", "beta_aux", "d_aux")
-                                   )
+                                   else if (likelihood == "lognormal") c(pars, "sdlog", "beta_aux", "d_aux")
+                                   else if (likelihood == "gengamma") c(pars, "sigma", "k", "beta_aux", "d_aux")
+                                   else c(pars, "shape", "beta_aux", "d_aux")
+    )
 
 
-  # -- Flexible parametric survival likelihoods (splines, piecewise exponential)
+    # -- Flexible parametric survival likelihoods (splines, piecewise exponential)
   } else if (likelihood %in% c("mspline", "pexp")) {
 
     # Pull out Surv data
@@ -2395,6 +2425,13 @@ if (class_effects == "exchangeable") {
   } else {
     abort(glue::glue('"{likelihood}" likelihood not supported.'))
   }
+
+  ## If chose zero iterations, return the stan arguments rather than a
+  ## stanfit model
+  if (!is.null(dots$iter) && dots$iter == 0) {
+    return(list(stanargs = stanargs))
+  }
+
 
   # Call sampling, managing warnings for integration checks if required
   if (n_int > 1 && int_check) {
@@ -2725,7 +2762,7 @@ check_likelihood <- function(x, outcome) {
     if (all(is.na(outcome))) x <- "normal"  # default for agd_regression only networks
     else x <- valid_lhood[1]
 
-  # Check valid option if given
+    # Check valid option if given
   } else if (!is.character(x) || length(x) > 1 || !tolower(x) %in% valid_lhood) {
     abort(glue::glue("`likelihood` should be a character string specifying a valid likelihood.\n",
                      "Suitable options for {otype} outcomes are currently: ",
@@ -2784,10 +2821,10 @@ inverse_link <- function(x, link = c("identity", "log", "logit", "probit", "clog
 
   out <-
     if (link == "identity") x
-    else if (link == "log") exp(x)
-    else if (link == "logit") plogis(x, ...)
-    else if (link == "probit") pnorm(x, ...)
-    else if (link == "cloglog") 1 - exp(-exp(x))
+  else if (link == "log") exp(x)
+  else if (link == "logit") plogis(x, ...)
+  else if (link == "probit") pnorm(x, ...)
+  else if (link == "cloglog") 1 - exp(-exp(x))
 
   return(out)
 }
@@ -2804,10 +2841,10 @@ link_fun <- function(x, link = c("identity", "log", "logit", "probit", "cloglog"
 
   out <-
     if (link == "identity") x
-    else if (link == "log") log(x)
-    else if (link == "logit") qlogis(x, ...)
-    else if (link == "probit") qnorm(x, ...)
-    else if (link == "cloglog") log(-log(1 - x))
+  else if (link == "log") log(x)
+  else if (link == "logit") qlogis(x, ...)
+  else if (link == "probit") qnorm(x, ...)
+  else if (link == "cloglog") log(-log(1 - x))
 
   return(out)
 }
@@ -2974,7 +3011,7 @@ make_nma_formula <- function(regression,
                              consistency = c("consistency", "nodesplit", "ume"),
                              classes,
                              class_interactions = c("common", "exchangeable", "independent")
-                             ) {
+) {
 
   if (!is.null(regression) && !rlang::is_formula(regression)) abort("`regression` is not a formula")
   consistency <- rlang::arg_match(consistency)
@@ -3062,7 +3099,7 @@ make_nma_model_matrix <- function(nma_formula,
   if (nrow(dat_agd_contrast) && !rlang::is_logical(agd_contrast_bl, n = nrow(dat_agd_contrast)))
     abort("`agd_contrast_bl` should be a logical vector of length nrow(agd_contrast)")
   if (!is.null(xbar) && (
-        !(rlang::is_double(xbar) || rlang::is_integer(xbar)) || !rlang::is_named(xbar)))
+    !(rlang::is_double(xbar) || rlang::is_integer(xbar)) || !rlang::is_named(xbar)))
     abort("`xbar` should be a named numeric vector")
 
   if (!consistency %in% c("consistency", "ume", "nodesplit")) {
@@ -3082,18 +3119,18 @@ make_nma_model_matrix <- function(nma_formula,
   # Sanitise factors
   if (.has_ipd) {
     dat_ipd <- dplyr::mutate_at(dat_ipd,
-      .vars = if (classes) c(".trt", ".study", ".trtclass") else c(".trt", ".study"),
-      .funs = fct_sanitise)
+                                .vars = if (classes) c(".trt", ".study", ".trtclass") else c(".trt", ".study"),
+                                .funs = fct_sanitise)
   }
   if (.has_agd_arm) {
     dat_agd_arm <- dplyr::mutate_at(dat_agd_arm,
-                            .vars = if (classes) c(".trt", ".study", ".trtclass") else c(".trt", ".study"),
-                            .funs = fct_sanitise)
+                                    .vars = if (classes) c(".trt", ".study", ".trtclass") else c(".trt", ".study"),
+                                    .funs = fct_sanitise)
   }
   if (.has_agd_contrast) {
     dat_agd_contrast <- dplyr::mutate_at(dat_agd_contrast,
-                            .vars = if (classes) c(".trt", ".study", ".trtclass") else c(".trt", ".study"),
-                            .funs = fct_sanitise)
+                                         .vars = if (classes) c(".trt", ".study", ".trtclass") else c(".trt", ".study"),
+                                         .funs = fct_sanitise)
   }
   if (.has_agd_regression) {
     dat_agd_regression <- dplyr::mutate_at(dat_agd_regression,
@@ -3151,9 +3188,9 @@ make_nma_model_matrix <- function(nma_formula,
     c_lev <- paste(trt_lev[ctr[, "row"]], trt_lev[ctr[, "col"]], sep = " vs. ")
 
     contrs_all <- dplyr::transmute(contrs_all,
-      .data$.study, .data$.trt,
-      .contr = forcats::fct_drop(factor(.data$.contr, levels = c("..ref..", c_lev))),
-      .data$.contr_sign)
+                                   .data$.study, .data$.trt,
+                                   .contr = forcats::fct_drop(factor(.data$.contr, levels = c("..ref..", c_lev))),
+                                   .data$.contr_sign)
 
     # Join contrast info on to study data
     if (.has_ipd)
@@ -3340,13 +3377,13 @@ make_nma_model_matrix <- function(nma_formula,
     if (ctype == "contr.treatment") {
       x_ref <-
         if (is.factor(dat_all[[xvar]])) levels(dat_all[[xvar]])[1]
-        else if (is.logical(dat_all[[xvar]])) FALSE
-        else levels(as.factor(dat_all[[xvar]]))[1]
+      else if (is.logical(dat_all[[xvar]])) FALSE
+      else levels(as.factor(dat_all[[xvar]]))[1]
     } else if (ctype == "contr.SAS") {
       x_ref <-
         if (is.factor(dat_all[[xvar]])) rev(levels(dat_all[[xvar]]))[1]
-        else if (is.logical(dat_all[[xvar]])) FALSE
-        else rev(levels(as.factor(dat_all[[xvar]])))[1]
+      else if (is.logical(dat_all[[xvar]])) FALSE
+      else rev(levels(as.factor(dat_all[[xvar]])))[1]
     } else {
       x_ref <- NULL
     }
@@ -3680,7 +3717,7 @@ prior_standat <- function(x, par, valid){
 
   if (!dist %in% valid)
     abort(glue::glue("Invalid `{par}`. Suitable distributions are: ",
-                glue::glue_collapse(valid, sep = ", ", last = ", or ")))
+                     glue::glue_collapse(valid, sep = ", ", last = ", or ")))
 
   distn <- switch(dist,
                   `flat (implicit)` = 0,
@@ -3708,10 +3745,10 @@ prior_standat <- function(x, par, valid){
 #' @noRd
 make_Sigma <- function(x) {
   return(unclass(
-           by(x,
-              forcats::fct_inorder(forcats::fct_drop(x$.study)),
-              FUN = make_Sigma_block,
-              simplify = FALSE)))
+    by(x,
+       forcats::fct_inorder(forcats::fct_drop(x$.study)),
+       FUN = make_Sigma_block,
+       simplify = FALSE)))
 }
 
 make_Sigma_block <- function(x) {
