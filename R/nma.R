@@ -1797,12 +1797,6 @@ nma.fit <- function(ipd_x, ipd_y,
     class_effects = ifelse(class_effects == "exchangeable", 1, 0)
   )
 
-  ## If no iterations return data rather than a fitted object
-  if (!is.null(dots$iter) && dots$iter == 0) {
-    # signal back to nma() that we only built standat
-    return(list(standat = standat))
-  }
-
   # Add priors
   standat <- purrr::list_modify(standat,
                                 !!! prior_standat(prior_intercept, "prior_intercept",
