@@ -1195,30 +1195,33 @@ nma <- function(network,
                      int_check = int_check,
                      basis = basis)
 
-  # if no iterations return the stan_... object but with the standata instead of the
+  # if no iterations return the stan arguments (data etc) instead of the
   # fitted object
   if (is.list(stanfit) && !inherits(stanfit, "stanfit")) {
-    out <- list(network = network,
-                stanfit = stanfit$standat,
-                trt_effects = trt_effects,
-                consistency = consistency,
-                regression = regression,
-                aux_regression = aux_regression,
-                class_interactions = if (!is.null(regression) && !is.null(network$classes)) class_interactions else NULL,
-                xbar = xbar,
-                likelihood = likelihood,
-                link = link,
-                aux_by = if (has_aux_by) colnames(get_aux_by_data(aux_dat, by = aux_by)) else NULL,
+    # got only stanargs back—build full output but swap in stanargs
+    out <- list(
+      network     = network,
+      stanargs   = stanfit$stanargs,
+      stanfit     = NULL,
+      trt_effects = trt_effects,
+      consistency = consistency,
+      regression  = regression,
+      aux_regression = aux_regression,
+      class_interactions = if (!is.null(regression) && !is.null(network$classes)) class_interactions else NULL,
+      xbar        = xbar,
+      likelihood  = likelihood,
+      link        = link,
+      aux_by      = if (has_aux_by) colnames(get_aux_by_data(aux_dat, by = aux_by)) else NULL,
                 priors = list(prior_intercept = if (has_intercepts) prior_intercept else NULL,
-                              prior_trt = prior_trt,
-                              prior_class_mean = if (class_effects == "exchangeable") prior_class_mean else NULL,
-                              prior_class_sd = if (class_effects == "exchangeable") prior_class_sd else NULL,
-                              prior_het = if (trt_effects == "random") prior_het else NULL,
-                              prior_het_type = if (trt_effects == "random") prior_het_type else NULL,
-                              prior_reg = if (!is.null(regression) && !is_only_offset(regression)) prior_reg else NULL,
-                              prior_aux = if (has_aux) prior_aux else NULL,
+        prior_trt       = prior_trt,
+        prior_class_mean= if (class_effects=="exchangeable") prior_class_mean else NULL,
+        prior_class_sd  = if (class_effects=="exchangeable") prior_class_sd else NULL,
+        prior_het       = if (trt_effects=="random") prior_het else NULL,
+        prior_het_type  = if (trt_effects=="random") prior_het_type else NULL,
+        prior_reg       = if (!is.null(regression)&&!is_only_offset(regression)) prior_reg else NULL,
+        prior_aux       = if (has_aux) prior_aux else NULL,
                               prior_aux_reg = if (has_aux_regression) prior_aux_reg else NULL))
-    class(out) <- if (inherits(network, "mlnmr_data")) c("stan_mlnmr", "stan_nma") else "stan_nma"
+    class(out) <- if (inherits(network,"mlnmr_data")) c("stan_mlnmr","stan_nma") else "stan_nma"
     return(out)
   }
 
@@ -2294,6 +2297,13 @@ nma.fit <- function(ipd_x, ipd_y,
   } else {
     abort(glue::glue('"{likelihood}" likelihood not supported.'))
   }
+
+  ## If chose zero iterations, return the stan arguments rather than a
+  ## stanfit model
+  if (!is.null(dots$iter) && dots$iter == 0) {
+    return(list(stanargs = stanargs))
+  }
+
 
   # Call sampling, managing warnings for integration checks if required
   if (n_int > 1 && int_check) {
