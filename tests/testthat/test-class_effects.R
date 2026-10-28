@@ -45,3 +45,22 @@ test_that("class_mean and class_sd parameters are named correctly", {
     levels() %>% setdiff(c("Waitlist", "Pill placebo", "Psychological placebo"))
   expect_equal(cs_params, paste0("class_sd[", expected_cs, "]"))
 })
+
+test_that("Stan models add class effects to the AgD regression linear predictor", {
+  stan_dir <- system.file("stan", package = "multinma")
+  if (stan_dir == "") stan_dir <- file.path("..", "..", "inst", "stan")
+  skip_if_not(dir.exists(stan_dir))
+
+  # Class-adjusted coefficients are built once from f_class...
+  tp <- readLines(file.path(stan_dir, "include", "transformed_parameters_common.stan"))
+  expect_true(any(grepl("allbeta_agd[totns + which_class_trt[j]] += f_class[j]", tp, fixed = TRUE)))
+
+  # ... and used (rather than raw allbeta) by every likelihood's AgD regression block
+  for (f in c("normal", "binomial_1par", "binomial_2par", "poisson",
+              "ordered_multinomial", "survival_param", "survival_mspline")) {
+    code <- readLines(file.path(stan_dir, paste0(f, ".stan")))
+    expect_true(any(grepl("eta_agd_regression", code, fixed = TRUE)), info = f)
+    expect_true(any(grepl("allbeta_agd", code, fixed = TRUE)), info = f)
+    expect_false(any(grepl("allbeta[XI_col_vec", code, fixed = TRUE)), info = f)
+  }
+})

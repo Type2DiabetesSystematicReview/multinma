@@ -25,7 +25,7 @@ array[RE_sparse ? n_delta + 1 : 0] int RE_L_u = RE_sparse ? csr_extract_u(RE_L) 
 // int totni = ni_ipd + nint * (ni_agd_arm + ni_agd_contrast);
 
 // Total number of study intercepts (none for contrast-based data)
-int totns = ns_ipd + ns_agd_arm; // + ns_agd_contrast;
+int totns = ns_ipd + ns_agd_arm + ns_agd_regression; // + ns_agd_contrast;
 
 // Number of IPD arms
 // int<lower=0> narm_ipd = ni_ipd ? max(ipd_arm) : 0;
@@ -38,6 +38,11 @@ matrix[0, nX] Xdummy;
 matrix[ni_ipd, nX] X_ipd = ni_ipd ? X[1:ni_ipd] : Xdummy;
 matrix[nint_max * ni_agd_arm, nX] X_agd_arm = ni_agd_arm ? X[(ni_ipd + 1):(ni_ipd + nint_max * ni_agd_arm)] : Xdummy;
 matrix[nint_max * ni_agd_contrast, nX] X_agd_contrast = ni_agd_contrast ? X[(ni_ipd + nint_max * ni_agd_arm + 1):(ni_ipd + nint_max * (ni_agd_arm + ni_agd_contrast))] : Xdummy;
+matrix[nc_agd_regression, nX] X_agd_regression = nc_agd_regression ? X[(ni_ipd + nint_max * (ni_agd_arm + ni_agd_contrast) + 1):(ni_ipd + nint_max * (ni_agd_arm + ni_agd_contrast) + nc_agd_regression)] : Xdummy;
+
+// -- AgD regression coefficients --
+matrix[(no_agd_regression || class_effects) ? nc_agd_regression : 0, (no_agd_regression || class_effects) ? nX : 0] X_agd_regression_no_QR = X_agd_regression; // Design matrix for AgD regression (no QR)
+if ((no_agd_regression || class_effects) && QR) X_agd_regression_no_QR = X_agd_regression * inverse(R_inv);
 
 // Split offsets into IPD and AgD rows
 vector[0] odummy;
@@ -70,33 +75,23 @@ if (ns_agd_contrast) {
   nc_agd_contrast[s] = c;
 }
 
-// Number of class effects and which_class_sd, mapping class sd to classes
-int<lower=0> n_class = class_effects ? max(which_CE) : 0;
-array[class_effects ? nt-1 : 0] int<lower=0> which_class; // Vector to mapping treatments to class effects
-array[class_effects ? n_class : 0] int<lower=0> which_class_sd; // Vector to map class SDs to classes
-
-int<lower=0> n_class_trts = num_elements(which_gt0a(which_CE));  // Number of treatments with class effects
+// Pick out treatments with class effects
+int<lower=0> n_class_trts = num_elements(which_gt0a(which_CE)); // Number of treatments with class effects
 array[n_class_trts] int which_class_trt = which_gt0a(which_CE); // Vector mapping classes to treatments
- if (class_effects) {
-    for (c in 1:n_class) {
-      for (t in 1:nt - 1) {
-        if (which_CE[t] == c) {
-          which_class_sd[c] = which_CE_sd[t];
-          break;
-        }
-      }
-    }
-  }
+
+// Pick out elements of zero-mean random class effects f_class by treatment
+int<lower=0> n_class = class_effects ? max(which_CE) : 0; // Number of classes
+array[class_effects ? nt-1 : 0] int<lower=0> which_fclass; // Vector to mapping treatments to f_class
 
 if (class_effects) {
   int count = 1;  // Counter for nonzero elements in f_class
 
   for (t in 1:(nt - 1)) {
     if (which_CE_sd[t] > 0) {
-      which_class[t] = count;
+      which_fclass[t] = count;
       count += 1;
     } else {
-      which_class[t] = 0;  // No class effect for this treatment
+      which_fclass[t] = 0;  // No class effect for this treatment
     }
   }
 }
