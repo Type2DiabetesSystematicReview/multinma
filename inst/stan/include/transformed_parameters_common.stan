@@ -59,6 +59,20 @@ if (class_effects) {
   d[which_class_trt] = class_mean[which_CE[which_class_trt]] + class_sd[which_CE_sd[which_class_trt]] .* z_class;
 }
 
+// -- Class-adjusted coefficients for AgD regression likelihood --
+// The AgD regression coefficients are modelled on the scale of allbeta, so the
+// treatment effect terms (columns totns + 1:(nt - 1) of allbeta) must include
+// the class effect deviation f_class, as for the IPD and AgD likelihoods.
+vector[nc_agd_regression ? nX : 0] allbeta_agd;
+if (nc_agd_regression) {
+  allbeta_agd = allbeta;
+  if (class_effects) {
+    for (j in 1:n_class_trts) {
+      allbeta_agd[totns + which_class_trt[j]] += f_class[j];
+    }
+  }
+}
+
 // -- IPD model --
 // We define the IPD and AgD models here in the transformed parameters block,
 // as the linear predictors are required to calculate the log likelihood

@@ -41,8 +41,8 @@ matrix[nint_max * ni_agd_contrast, nX] X_agd_contrast = ni_agd_contrast ? X[(ni_
 matrix[nc_agd_regression, nX] X_agd_regression = nc_agd_regression ? X[(ni_ipd + nint_max * (ni_agd_arm + ni_agd_contrast) + 1):(ni_ipd + nint_max * (ni_agd_arm + ni_agd_contrast) + nc_agd_regression)] : Xdummy;
 
 // -- AgD regression coefficients --
-matrix[no_agd_regression ? nc_agd_regression : 0, no_agd_regression ? nX : 0] X_agd_regression_no_QR = X_agd_regression; // Design matrix for AgD regression (no QR)
-if (no_agd_regression && QR) X_agd_regression_no_QR = X_agd_regression * inverse(R_inv);
+matrix[(no_agd_regression || class_effects) ? nc_agd_regression : 0, (no_agd_regression || class_effects) ? nX : 0] X_agd_regression_no_QR = X_agd_regression; // Design matrix for AgD regression (no QR)
+if ((no_agd_regression || class_effects) && QR) X_agd_regression_no_QR = X_agd_regression * inverse(R_inv);
 
 // Split offsets into IPD and AgD rows
 vector[0] odummy;

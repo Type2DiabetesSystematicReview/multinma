@@ -244,7 +244,7 @@ transformed parameters {
           if (link == 1){ // logit link
 
             mu_ful[(c_x+1):(c_x+agd_regression_nx[i])] =
-              inv_logit(X_agd_regression_int[ (c_x+1):(c_x+agd_regression_nx[i]),] * allbeta) ;
+              inv_logit(X_agd_regression_int[ (c_x+1):(c_x+agd_regression_nx[i]),] * allbeta_agd) ;
 
             mu_err[(c_x+1):(c_x+agd_regression_nx[i])] =
               mu_red[ (c_x+1):(c_x+agd_regression_nx[i])] -
@@ -255,9 +255,9 @@ transformed parameters {
               logit(mu_red[(c_x+1):(c_x+agd_regression_nx[i])] - mu_err[(c_x+1):(c_x+agd_regression_nx[i])]);
 
             eta_agd_regression[(c_c+1):(c_c+agd_regression_ncoef[i])] =
-              allbeta[XI_col_vec[(c_i+1):(c_i+agd_regression_ncoef_inc[i])]] +
+              allbeta_agd[XI_col_vec[(c_i+1):(c_i+agd_regression_ncoef_inc[i])]] +
               block(agd_regression_OVB_mat_omt[i], 1, 1,agd_regression_ncoef_inc[i] ,agd_regression_ncoef_omt[i] ) *
-              allbeta[XO_col_vec[(c_o+1):(c_o+agd_regression_ncoef_omt[i])]] +
+              allbeta_agd[XO_col_vec[(c_o+1):(c_o+agd_regression_ncoef_omt[i])]] +
               block(agd_regression_OVB_mat_hat[i]  , 1, 1,agd_regression_ncoef_inc[i] ,agd_regression_nx[i] ) *
               lp_err[(c_x+1):(c_x+agd_regression_nx[i])];
 
@@ -265,7 +265,7 @@ transformed parameters {
           }else if (link == 2){ // probit link
 
             mu_ful[(c_x+1):(c_x+agd_regression_nx[i])] =
-              Phi(X_agd_regression_int[ (c_x+1):(c_x+agd_regression_nx[i]),] * allbeta) ;
+              Phi(X_agd_regression_int[ (c_x+1):(c_x+agd_regression_nx[i]),] * allbeta_agd) ;
 
             mu_err[(c_x+1):(c_x+agd_regression_nx[i])] =
               mu_red[ (c_x+1):(c_x+agd_regression_nx[i])] -
@@ -276,16 +276,16 @@ transformed parameters {
               inv_Phi(mu_red[(c_x+1):(c_x+agd_regression_nx[i])] - mu_err[(c_x+1):(c_x+agd_regression_nx[i])]);
 
             eta_agd_regression[(c_c+1):(c_c+agd_regression_ncoef[i])] =
-              allbeta[XI_col_vec[(c_i+1):(c_i+agd_regression_ncoef_inc[i])]] +
+              allbeta_agd[XI_col_vec[(c_i+1):(c_i+agd_regression_ncoef_inc[i])]] +
               block(agd_regression_OVB_mat_omt[i], 1, 1,agd_regression_ncoef_inc[i] ,agd_regression_ncoef_omt[i] ) *
-              allbeta[XO_col_vec[(c_o+1):(c_o+agd_regression_ncoef_omt[i])]] +
+              allbeta_agd[XO_col_vec[(c_o+1):(c_o+agd_regression_ncoef_omt[i])]] +
               block(agd_regression_OVB_mat_hat[i]  , 1, 1,agd_regression_ncoef_inc[i] ,agd_regression_nx[i] ) *
               lp_err[(c_x+1):(c_x+agd_regression_nx[i])];
 
           }else if (link == 3){ // cloglog link
 
             mu_ful[(c_x+1):(c_x+agd_regression_nx[i])] =
-              inv_cloglog(X_agd_regression_int[ (c_x+1):(c_x+agd_regression_nx[i]),] * allbeta) ;
+              inv_cloglog(X_agd_regression_int[ (c_x+1):(c_x+agd_regression_nx[i]),] * allbeta_agd) ;
 
             mu_err[(c_x+1):(c_x+agd_regression_nx[i])] =
               mu_red[ (c_x+1):(c_x+agd_regression_nx[i])] -
@@ -296,15 +296,15 @@ transformed parameters {
               log(-log1m(mu_red[(c_x+1):(c_x+agd_regression_nx[i])] - mu_err[(c_x+1):(c_x+agd_regression_nx[i])]));
 
             eta_agd_regression[(c_c+1):(c_c+agd_regression_ncoef[i])] =
-              allbeta[XI_col_vec[(c_i+1):(c_i+agd_regression_ncoef_inc[i])]] +
+              allbeta_agd[XI_col_vec[(c_i+1):(c_i+agd_regression_ncoef_inc[i])]] +
               block(agd_regression_OVB_mat_omt[i], 1, 1,agd_regression_ncoef_inc[i] ,agd_regression_ncoef_omt[i] ) *
-              allbeta[XO_col_vec[(c_o+1):(c_o+agd_regression_ncoef_omt[i])]] +
+              allbeta_agd[XO_col_vec[(c_o+1):(c_o+agd_regression_ncoef_omt[i])]] +
               block(agd_regression_OVB_mat_hat[i]  , 1, 1,agd_regression_ncoef_inc[i] ,agd_regression_nx[i] ) *
               lp_err[(c_x+1):(c_x+agd_regression_nx[i])];
 
           }
         }else{
-          eta_agd_regression[ (c_c+1):(c_c+agd_regression_ncoef[i]) ] = X_agd_regression_no_QR[ (c_c+1):(c_c+agd_regression_ncoef[i]), ] * allbeta;
+          eta_agd_regression[ (c_c+1):(c_c+agd_regression_ncoef[i]) ] = X_agd_regression_no_QR[ (c_c+1):(c_c+agd_regression_ncoef[i]), ] * allbeta_agd;
         }
         c_c += agd_regression_ncoef[i];
         c_i += agd_regression_ncoef_inc[i];
@@ -312,7 +312,7 @@ transformed parameters {
         c_x += agd_regression_nx[i];
       }
     }else{
-      eta_agd_regression = X_agd_regression * beta_tilde;
+      eta_agd_regression = (class_effects ? X_agd_regression_no_QR * allbeta_agd : X_agd_regression * beta_tilde);
     }
 
     if (RE) {

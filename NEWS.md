@@ -10,6 +10,9 @@ fitted and instead a list of input data to Stan is returned.
 integration points. Furthermore, `relative_effects()` will now ask for 
 integration points to be provided for models that involve non-linear covariate 
 terms, so that these can be averaged over correctly. 
+* Fix: Exchangeable class effects (`class_effects = "exchangeable"`) are now
+included in the AgD regression likelihood (`set_agd_regression()`), so that class
+parameters are informed by AgD regression data.
 * Fix: Error in `dic()` for models with IPD and a Normal likelihood, caused by
 dplyr deprecation.
 
